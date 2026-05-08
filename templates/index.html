@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Welcome, {{ username }}!</h2>
+    <p>
+        <a href="{{ url_for('add') }}">Add New Password</a> | 
+        <a href="{{ url_for('generate') }}">Generate Password</a> | 
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </p>
+    
+    <h3>Your Saved Passwords</h3>
+    {% if passwords %}
+        <table border="1">
+            <tr>
+                <th>Service</th>
+                <th>Username</th>
+                <th>Password</th>
+            </tr>
+            {% for p in passwords %}
+            <tr>
+                <td>{{ p.service }}</td>
+                <td>{{ p.username }}</td>
+                <td>{{ p.password }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>You have no saved passwords.</p>
+    {% endif %}
+{% endblock %}
