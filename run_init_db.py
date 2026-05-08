@@ -11,16 +11,15 @@ def init_db():
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
 
-    # Users table
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL
+            password_hash TEXT NOT NULL,
+            encryption_salt TEXT NOT NULL
         )
     ''')
 
-    # Vault table
     c.execute('''
         CREATE TABLE IF NOT EXISTS vault (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
