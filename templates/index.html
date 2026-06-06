@@ -1,29 +1,221 @@
 {% extends "base.html" %}
 {% block content %}
-    <h2>Welcome, {{ username }}!</h2>
-    <p>
-        <a href="{{ url_for('add') }}">Add New Password</a> | 
-        <a href="{{ url_for('generate') }}">Generate Password</a> | 
-        <a href="{{ url_for('logout') }}">Logout</a>
-    </p>
-    
-    <h3>Your Saved Passwords</h3>
+<style>
+    .nav-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px 20px;
+        margin-bottom: 18px;
+    }
+    .nav-user {
+        font-size: 14px;
+        color: var(--text-muted);
+    }
+    .nav-user strong { color: var(--text-dim); font-weight: 500; }
+    .nav-actions { display: flex; gap: 8px; }
+
+    .vault-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+    }
+    .vault-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border);
+    }
+    .vault-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .vault-count {
+        font-size: 13px;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
+    .vault-table { width: 100%; border-collapse: collapse; }
+    .vault-table th {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .6px;
+        color: var(--text-muted);
+        padding: 11px 24px;
+        text-align: left;
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--border);
+    }
+    .vault-table td {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+        vertical-align: middle;
+    }
+    .vault-table tr:last-child td { border-bottom: none; }
+    .vault-table tbody tr:hover td { background: var(--surface-2); }
+
+    .service-cell { display: flex; align-items: center; gap: 12px; }
+    .service-initial {
+        width: 32px; height: 32px;
+        border-radius: 7px;
+        background: var(--surface-3);
+        border: 1px solid var(--border-2);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        flex-shrink: 0;
+    }
+    .service-name { font-weight: 500; color: var(--text); font-size: 14px; }
+
+    .pw-cell { display: flex; align-items: center; gap: 8px; }
+    .pw-mask {
+        font-family: monospace;
+        letter-spacing: 2px;
+        color: var(--text-muted);
+        font-size: 16px;
+        line-height: 1;
+    }
+    .pw-plain {
+        display: none;
+        font-family: monospace;
+        font-size: 14px;
+        color: var(--text);
+        word-break: break-all;
+    }
+
+    .icon-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px 6px;
+        border-radius: 6px;
+        color: var(--text-muted);
+        display: flex; align-items: center;
+        transition: background .12s, color .12s;
+        flex-shrink: 0;
+    }
+    .icon-btn:hover { background: var(--surface-3); color: var(--text-dim); }
+
+    .empty-state {
+        text-align: center;
+        padding: 52px 24px;
+    }
+    .empty-state h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--text-dim); }
+    .empty-state p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
+    .empty-state .btn-primary { width: auto; display: inline-flex; padding: 9px 20px; }
+</style>
+
+<div class="nav-bar">
+    <span class="nav-user">Signed in as <strong>{{ username }}</strong></span>
+    <div class="nav-actions">
+        <a href="{{ url_for('add') }}" class="btn btn-sm btn-ghost">Add</a>
+        <a href="{{ url_for('generate') }}" class="btn btn-sm btn-ghost">Generate</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-sm btn-subtle">Sign out</a>
+    </div>
+</div>
+
+<div class="vault-card">
+    <div class="vault-header">
+        <span class="vault-title">Vault</span>
+        {% if passwords %}
+        <span class="vault-count">{{ passwords | length }} item{{ 's' if passwords | length != 1 }}</span>
+        {% endif %}
+    </div>
+
     {% if passwords %}
-        <table border="1">
+    <table class="vault-table">
+        <thead>
             <tr>
                 <th>Service</th>
-                <th>Username</th>
+                <th>Username / Email</th>
                 <th>Password</th>
+                <th></th>
             </tr>
-            {% for p in passwords %}
-            <tr>
-                <td>{{ p.service }}</td>
-                <td>{{ p.username }}</td>
-                <td>{{ p.password }}</td>
-            </tr>
-            {% endfor %}
-        </table>
+        </thead>
+        <tbody>
+        {% for p in passwords %}
+        <tr>
+            <td>
+                <div class="service-cell">
+                    <div class="service-initial">{{ p.service[0] }}</div>
+                    <span class="service-name">{{ p.service }}</span>
+                </div>
+            </td>
+            <td style="color:var(--text-dim);">{{ p.username }}</td>
+            <td>
+                <div class="pw-cell">
+                    <span class="pw-mask" id="mask-{{ loop.index }}">&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;</span>
+                    <span class="pw-plain" id="plain-{{ loop.index }}">{{ p.password }}</span>
+                    <button class="icon-btn" onclick="toggleRow({{ loop.index }}, this)" title="Show/hide">
+                        <svg class="icon-eye" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        <svg class="icon-eye-off" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    </button>
+                    <button class="icon-btn" data-pw="{{ p.password }}" onclick="copyRow(this)" title="Copy">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    </button>
+                </div>
+            </td>
+            <td>
+                <form method="POST" action="{{ url_for('delete', entry_id=p.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="icon-btn" title="Delete"
+                            style="color:var(--text-muted);"
+                            onclick="return confirm('Delete {{ p.service }} entry?')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
     {% else %}
-        <p>You have no saved passwords.</p>
+    <div class="empty-state">
+        <h3>No passwords saved yet</h3>
+        <p>Add your first entry to get started.</p>
+        <a href="{{ url_for('add') }}" class="btn btn-primary">Add password</a>
+    </div>
     {% endif %}
+</div>
+
+<script>
+function toggleRow(idx, btn) {
+    const mask  = document.getElementById('mask-'  + idx);
+    const plain = document.getElementById('plain-' + idx);
+    const eyeOn  = btn.querySelector('.icon-eye');
+    const eyeOff = btn.querySelector('.icon-eye-off');
+
+    const isHidden = plain.style.display !== 'inline';
+    if (isHidden) {
+        mask.style.display  = 'none';
+        plain.style.display = 'inline';
+        eyeOn.style.display  = 'none';
+        eyeOff.style.display = 'block';
+    } else {
+        mask.style.display  = '';
+        plain.style.display = 'none';
+        eyeOn.style.display  = 'block';
+        eyeOff.style.display = 'none';
+    }
+}
+
+function copyRow(btn) {
+    navigator.clipboard.writeText(btn.dataset.pw).then(() => {
+        const svg = btn.querySelector('svg');
+        svg.style.color = '#4ade80';
+        setTimeout(() => svg.style.color = '', 2000);
+    });
+}
+</script>
 {% endblock %}

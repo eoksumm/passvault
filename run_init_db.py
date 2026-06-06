@@ -1,16 +1,14 @@
 import sqlite3
 import os
 
+
 def init_db():
     db_path = 'passvault.db'
-    
     if os.path.exists(db_path):
-        print("Database already exists.")
         return
 
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,7 +17,6 @@ def init_db():
             encryption_salt TEXT NOT NULL
         )
     ''')
-
     c.execute('''
         CREATE TABLE IF NOT EXISTS vault (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,10 +27,9 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
-
     conn.commit()
     conn.close()
-    print("Database initialized successfully.")
+
 
 if __name__ == '__main__':
     init_db()
